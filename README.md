@@ -1,6 +1,8 @@
 # PBKDF2HmacSHA1
 PBKDF2WithHmacSHA1 for mosquitto-auth-plug
-
+PBKDF2
+java
+mosquitto-auth-plug
 mosquitto
 
 BASE64 
