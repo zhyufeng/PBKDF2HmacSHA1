@@ -1,7 +1,8 @@
-package com.zhyufeng.pahomqtt;
+package com.zhyufeng.pbkdf2;
 
 
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 
@@ -64,7 +65,7 @@ public class PBKDF2HmacSHA1 {
      * @throws NoSuchAlgorithmException 
      * @throws InvalidKeySpecException 
      */  
-    public static String getEncryptedPassword(String password, String salt) throws NoSuchAlgorithmException,  
+    public static String encryptedPassword(String password, String salt) throws NoSuchAlgorithmException,  
             InvalidKeySpecException {  
     	String ciphertext;
     	
@@ -77,27 +78,64 @@ public class PBKDF2HmacSHA1 {
     }  
     
     
-    //TEST
-    public static void main(String[] args){
-    	String password = "password";
-    	String salt = "XaIs9vQgmLujKHZG4/B3dNTbeP2PyaVKySTirZznBrE=";
-    	String pbkstr = "PBKDF2$sha1$98$XaIs9vQgmLujKHZG4/B3dNTbeP2PyaVKySTirZznBrE=$2DX/HZDTojVbfgAIdozBi6CihjWP1+akYnh/h9uQfIVl6pLoAiwJe1ey2WW2BnT+";
-    	String ciphertext;
-    	Boolean match;
-    	
-    	try {
-    		ciphertext = getEncryptedPassword(password,salt);
-			System.out.println(ciphertext); 
-			System.out.println("Checking password ["+"password"+"] for "+"pbkstr");
-			match = ciphertext.equals(pbkstr);
-			System.out.println("match: "+match );
-			
-	    } catch (NoSuchAlgorithmException e) {  
-	    	 System.out.println("NoSuchAlgorithmException"); 
-	    } catch (InvalidKeySpecException e) {
-	    	 System.out.println("InvalidKeySpecException");
-		} 
-    	
+    
+    /** 
+     * validate Encrypted Password
+     *  
+     * @param originalPassword 
+     * @param storedPassword 
+     * @return 
+     * @throws NoSuchAlgorithmException 
+     * @throws InvalidKeySpecException 
+     */  
+    public static boolean validatePassword(String originalPassword,  
+            String storedPassword) throws NoSuchAlgorithmException,  
+            InvalidKeySpecException {
+    	    //split storedpassword
+    		String[] parts = storedPassword.split("\\$");
+    		String pbk = parts[0];
+    		String sha = parts[1];
+    		int iter = Integer.parseInt(parts[2]);
+    		String salt  = parts[3];
+    		String keyStored   = parts[4];
+    		String shaAlgorithm;
+    		
+    		switch(sha){
+    			case "sha1":
+    				shaAlgorithm = "PBKDF2WithHmacSHA1";
+    				break;
+    			case "sha256":
+    				shaAlgorithm = "PBKDF2WithHmacSHA256";
+    				break;
+    			case "sha512":
+    				shaAlgorithm = "PBKDF2WithHmacSHA512";
+    				break;
+    			default:
+    				throw new NoSuchAlgorithmException();
+    		}
+    			
+    		//create Encrypted key
+    		KeySpec spec = new PBEKeySpec(originalPassword.toCharArray(), salt.getBytes(), iter, HASH_KEY_LEN);  
+            SecretKeyFactory sf = SecretKeyFactory.getInstance(shaAlgorithm);
+            String keyOriginal = new String( Base64.encodeBase64( sf.generateSecret(spec).getEncoded() ) );    
+            
+    		boolean mach= keyOriginal.equals(keyStored);	   	
+    	    return mach ; 
     }
+    
+    /** 
+     * Generate a random salt  
+     *  
+     * @return 
+     * @throws NoSuchAlgorithmException 
+     */  
+    public static String generateSalt() throws NoSuchAlgorithmException {  
+        SecureRandom random = SecureRandom.getInstance("SHA1PRNG");  
+        byte[] salt = new byte[SALT_LEN];  
+        random.nextBytes(salt);  
+  
+        return new String(Base64.encodeBase64(salt)); 
+    }  
+    
     
 }
